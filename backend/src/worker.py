@@ -1,13 +1,14 @@
 import time,json,traceback
 from pathlib import Path
 import redis
-from src.config.database import Base,engine,Session
+from src.config.database import ensure_schema,Session
 from src.config.settings import REDIS_URL
-from src.models import identity,source,run
+from src.models import identity,source,run,fx
 from src.models.run import Run
 from src.services.calculation import calculate
+from src.services.fx import fx_calculate
 from src.services.delivery import tick
-Base.metadata.create_all(engine)
+ensure_schema()
 r=redis.Redis.from_url(REDIS_URL)
 while True:
  Path('/tmp/worker-heartbeat').write_text(str(time.time()))
@@ -18,7 +19,10 @@ while True:
     job=db.get(Run,int(item))
     if job and job.status=='queued':
      job.status='running';db.commit()
-     try: job.result=calculate(job.snapshot['sources'],job.snapshot['policy']);job.status='completed'
+     try:
+      if (job.kind or 'cost')=='fx': job.result=fx_calculate(job.snapshot)
+      else: job.result=calculate(job.snapshot['sources'],job.snapshot['policy'])
+      job.status='completed'
      except Exception as exc: job.status='failed';job.error=str(exc);traceback.print_exc()
      db.commit()
   with Session() as db: tick(db)

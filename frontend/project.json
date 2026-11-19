@@ -35,6 +35,38 @@
       "工艺研究": 22
     }
   },
+  "fx": {
+    "quote_label": "汇率报价",
+    "expense_label": "境外费用底稿",
+    "quote_fields": {
+      "date": "日期",
+      "base": "基准币",
+      "quote": "报价币",
+      "rate": "报价（1基准币兑报价币）"
+    },
+    "expense_fields": {
+      "date": "日期",
+      "voucher": "凭证编号",
+      "department": "部门",
+      "category": "费用类别",
+      "currency": "币种",
+      "amount_minor": "原币金额（最小单位）"
+    },
+    "quote_example": {
+      "date": "2026-11-19",
+      "base": "USD",
+      "quote": "CNY",
+      "rate": "7.12"
+    },
+    "expense_example": {
+      "date": "2026-11-19",
+      "voucher": "FX-2026-0049",
+      "department": "公共",
+      "category": "境外差旅",
+      "currency": "USD",
+      "amount_minor": 125000
+    }
+  },
   "colors": [
     "0.94 0.035 88",
     "0.26 0.07 23",

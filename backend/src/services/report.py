@@ -3,6 +3,7 @@ from fastapi import HTTPException
 from src.models.source import Source,Policy
 from src.models.run import Run
 from src.services.audit import log
+from src.services.fxstore import snapshot_inputs
 from src.config.settings import REDIS_URL
 import redis
 def submit(db,user,body):
@@ -12,8 +13,19 @@ def submit(db,user,body):
  if not sources: raise HTTPException(422,'所选期间没有底稿')
  snapshot={'policy':policy.data,'sources':sources,'period':body.period}
  checksum=hashlib.sha256(json.dumps(snapshot,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
- obj=Run(name=body.name,status='queued',snapshot=snapshot,checksum=checksum,created=time.time(),approved=False)
+ obj=Run(name=body.name,kind='cost',status='queued',snapshot=snapshot,checksum=checksum,created=time.time(),approved=False)
  db.add(obj);log(db,user.email,'run.queue',body.name);db.commit()
+ redis.Redis.from_url(REDIS_URL).rpush('report-jobs',obj.id)
+ return obj
+def submit_fx(db,user,body):
+ policy=db.get(Policy,body.policy_id)
+ if not policy: raise HTTPException(404,'口径版本不存在')
+ expenses,quotes=snapshot_inputs(body.period)
+ if not expenses: raise HTTPException(422,'所选期间没有境外费用底稿')
+ snapshot={'kind':'fx','policy':policy.data,'expenses':expenses,'quotes':quotes,'period':body.period}
+ checksum=hashlib.sha256(json.dumps(snapshot,sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+ obj=Run(name=body.name,kind='fx',status='queued',snapshot=snapshot,checksum=checksum,created=time.time(),approved=False)
+ db.add(obj);log(db,user.email,'fxrun.queue',body.name);db.commit()
  redis.Redis.from_url(REDIS_URL).rpush('report-jobs',obj.id)
  return obj
 def approve(db,user,id,note):
